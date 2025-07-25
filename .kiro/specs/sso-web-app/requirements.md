@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This project involves creating a small web application built with Clojure and (TODO: select web framework) that provides user authentication through Single Sign-On (SSO) with Microsoft 365 and GitHub accounts. The application features a simple login flow where users authenticate via their preferred SSO provider, then access a personalized dashboard displaying their username with a greeting message and logout functionality. The backend uses SQLite for data persistence and (TODO) templating engine for server-side rendering.
+This project involves creating a small web application built with Clojure and Ring/Compojure web framework that provides user authentication through Single Sign-On (SSO) with Microsoft 365 and GitHub accounts. The application features a simple login flow where users authenticate via their preferred SSO provider, then access a personalized dashboard displaying their username with a greeting message and logout functionality. The backend uses SQLite for data persistence and Hiccup or Selmer templating engine for server-side rendering.
 
 ## Requirements
 
@@ -59,8 +59,8 @@ This project involves creating a small web application built with Clojure and (T
 
 #### Acceptance Criteria
 
-1. WHEN any page is requested THEN the system SHALL use (TODO) templating engine to render HTML
+1. WHEN any page is requested THEN the system SHALL use Hiccup or Selmer templating engine to render HTML
 2. WHEN the login page is rendered THEN the system SHALL use a template to generate the HTML structure
 3. WHEN the personal page is rendered THEN the system SHALL inject the user's data into the template
 4. WHEN templates are processed THEN the system SHALL handle template errors gracefully
-5. WHEN the application builds THEN the system SHALL compile templates at build time for performance
+5. WHEN the application builds THEN the system SHALL optimize templates for performance

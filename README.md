@@ -1,6 +1,6 @@
 # SSO Web App
 
-A secure Single Sign-On (SSO) web application built with Rust and Axum, supporting authentication via Microsoft 365 and GitHub OAuth2 providers.
+A secure Single Sign-On (SSO) web application built with Clojure, supporting authentication via Microsoft 365 and GitHub OAuth2 providers.
 
 ## Kiro Review
 This was generated with AWS Kiro. TODO....
@@ -20,14 +20,15 @@ This is part of an experiment with multiple version generated from the same spec
 - 🗄️ **SQLite Database** with automatic migrations
 - 🔒 **CSRF Protection** for OAuth2 flows
 - 📱 **Mobile-Friendly** responsive design
-- ⚡ **Fast & Lightweight** built with Rust and Axum
+- ⚡ **Fast & Lightweight** built with Clojure
 - 🧪 **Comprehensive Testing** with unit and integration tests
 
 ## Quick Start
 
 ### Prerequisites
 
-- Rust 1.70+ (install from [rustup.rs](https://rustup.rs/))
+- Java 11+ (for Clojure runtime)
+- Leiningen or Clojure CLI tools
 - Git
 
 ### 1. Clone the Repository
@@ -84,23 +85,20 @@ Run the initialization script to set up your environment:
 
 **Development mode:**
 ```bash
-cargo run
+lein run
 ```
 
 **With debug logging:**
-```powershell
-# Windows PowerShell
-$env:RUST_LOG='debug'; cargo run
-
-# Linux/macOS
-RUST_LOG=debug cargo run
+```bash
+# Set logging level
+export LOG_LEVEL=debug
+lein run
 ```
 
 **Production build:**
 ```bash
-cargo build --release
-./target/release/sso-web-app  # Linux/macOS
-.\target\release\sso-web-app.exe  # Windows
+lein uberjar
+java -jar target/uberjar/sso-web-app-*-standalone.jar
 ```
 
 The application will be available at `http://localhost:3000`
@@ -166,14 +164,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 ```bash
 # Run all tests
-cargo test
+lein test
 
-# Run specific test suites
-cargo test --lib          # Unit tests
-cargo test --test integration_tests  # Integration tests
+# Run specific test namespaces
+lein test sso-web-app.core-test
 
-# Run with output
-cargo test -- --nocapture
+# Run with detailed output
+lein test :verbose
 ```
 
 ### Database Management
@@ -182,22 +179,22 @@ The application automatically creates and migrates the SQLite database on startu
 
 ```bash
 rm sso_app.db
-cargo run  # Will recreate and migrate
+lein run  # Will recreate and migrate
 ```
 
 ### Logging
 
-Set the `RUST_LOG` environment variable to control logging levels:
+Set the `LOG_LEVEL` environment variable to control logging levels:
 
 ```bash
 # Debug level (default in development)
-RUST_LOG=debug cargo run
+LOG_LEVEL=debug lein run
 
 # Info level for production
-RUST_LOG=info cargo run
+LOG_LEVEL=info lein run
 
-# Specific module logging
-RUST_LOG=sso_web_app=debug,tower_http=info cargo run
+# Specific namespace logging
+LOG_LEVEL=debug lein run
 ```
 
 ## Production Deployment
@@ -205,10 +202,10 @@ RUST_LOG=sso_web_app=debug,tower_http=info cargo run
 ### Building for Production
 
 ```bash
-# Build optimized release binary
-cargo build --release
+# Build uberjar for production
+lein uberjar
 
-# The binary will be at ./target/release/sso-web-app
+# The jar will be at ./target/uberjar/sso-web-app-*-standalone.jar
 ```
 
 ### Production Configuration
@@ -216,7 +213,7 @@ cargo build --release
 1. **Use HTTPS**: Update `BASE_URL` to use `https://`
 2. **Secure Session Secret**: Use a strong, randomly generated secret
 3. **Database**: Consider using a persistent volume for SQLite file
-4. **Logging**: Set `RUST_LOG=info` or `RUST_LOG=warn`
+4. **Logging**: Set `LOG_LEVEL=info` or `LOG_LEVEL=warn`
 5. **OAuth2 Redirects**: Update OAuth2 app configurations with production URLs
 
 ### Docker Deployment
@@ -224,19 +221,20 @@ cargo build --release
 Create a `Dockerfile`:
 
 ```dockerfile
-FROM rust:1.70 as builder
+FROM clojure:openjdk-11-lein as builder
 WORKDIR /app
-COPY . .
-RUN cargo build --release
+COPY project.clj .
+COPY src ./src
+COPY resources ./resources
+RUN lein uberjar
 
-FROM debian:bookworm-slim
+FROM openjdk:11-jre-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /app/target/release/sso-web-app .
-COPY --from=builder /app/templates ./templates
-COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/target/uberjar/sso-web-app-*-standalone.jar ./app.jar
+COPY --from=builder /app/resources ./resources
 EXPOSE 3000
-CMD ["./sso-web-app"]
+CMD ["java", "-jar", "app.jar"]
 ```
 
 Build and run:
@@ -312,7 +310,7 @@ server {
 Run with debug logging to troubleshoot issues:
 
 ```bash
-RUST_LOG=debug cargo run
+LOG_LEVEL=debug lein run
 ```
 
 ## Contributing
@@ -320,7 +318,7 @@ RUST_LOG=debug cargo run
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature-name`
 3. Make your changes and add tests
-4. Run tests: `cargo test`
+4. Run tests: `lein test`
 5. Commit your changes: `git commit -am 'Add feature'`
 6. Push to the branch: `git push origin feature-name`
 7. Submit a pull request
@@ -333,37 +331,37 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Technology Stack
 
-- **Backend**: Rust with Axum web framework
-- **Database**: SQLite with SQLx for async operations
-- **Templates**: Askama (compile-time Jinja2-like templates)
+- **Backend**: Clojure with Ring/Compojure web framework
+- **Database**: SQLite with clojure.java.jdbc
+- **Templates**: Hiccup or Selmer templating
 - **Authentication**: OAuth2 with Microsoft Graph API and GitHub API
-- **Session Management**: Tower-sessions with memory store
-- **Testing**: Built-in Rust testing with axum-test
+- **Session Management**: Ring session middleware
+- **Testing**: Built-in Clojure testing with clojure.test
 
 ### Project Structure
 
 ```
 sso-web-app/
 ├── src/
-│   ├── main.rs              # Application entry point
-│   ├── lib.rs               # Library exports
-│   ├── auth.rs              # OAuth2 authentication logic
-│   ├── config.rs            # Configuration management
-│   ├── database.rs          # Database models and repository
-│   ├── error.rs             # Error handling and types
-│   ├── handlers.rs          # HTTP route handlers
-│   ├── models.rs            # Data models
-│   ├── session.rs           # Session management
-│   └── templates.rs         # Template structures
-├── templates/               # Askama HTML templates
-│   ├── base.html           # Base template layout
-│   ├── login.html          # Login page
-│   └── dashboard.html      # User dashboard
-├── migrations/             # Database migrations
-│   └── 001_create_users_table.sql
-├── tests/                  # Integration tests
-│   └── integration_tests.rs
-├── Cargo.toml             # Rust dependencies
+│   └── sso_web_app/
+│       ├── core.clj         # Application entry point
+│       ├── auth.clj         # OAuth2 authentication logic
+│       ├── config.clj       # Configuration management
+│       ├── database.clj     # Database models and repository
+│       ├── handlers.clj     # HTTP route handlers
+│       ├── models.clj       # Data models
+│       └── session.clj      # Session management
+├── resources/
+│   ├── templates/           # HTML templates
+│   │   ├── base.html       # Base template layout
+│   │   ├── login.html      # Login page
+│   │   └── dashboard.html  # User dashboard
+│   └── migrations/         # Database migrations
+│       └── 001_create_users_table.sql
+├── test/                   # Tests
+│   └── sso_web_app/
+│       └── core_test.clj
+├── project.clj            # Clojure dependencies
 ├── .env.example           # Environment variables template
 └── README.md              # This file
 ```
