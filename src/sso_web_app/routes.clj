@@ -101,11 +101,11 @@
                                         {:provider provider :user-id (:id user) 
                                          :username (:username user)})
                   (errors/log-auth-event :session-created request 
-                                        {:user-id (:id user) :session-id (:session-id session)})
+                                        {:user-id (:id user) :session-id (:session_id session)})
                   
                   ;; Redirect to dashboard with session cookie
                   (-> (response/redirect "/dashboard")
-                      (middleware/add-session-cookie (:session-id session))
+                      (middleware/add-session-cookie (:session_id session))
                       ;; Clear OAuth state from session
                       (assoc :session {}))))
               (do
