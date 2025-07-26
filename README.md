@@ -27,7 +27,7 @@ A Clojure web application that provides Single Sign-On authentication with Micro
    - **Microsoft 365**: Register at [Azure App Registrations](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps)
      - Redirect URI: `http://localhost:3000/auth/microsoft/callback`
    - **GitHub**: Register at [GitHub Developer Settings](https://github.com/settings/developers)
-     - Authorization callback URL: `http://localhost:3000/auth/github/callback`
+     - Authorization callback URL: `http://localhost:3000/auth/callback/github`
 
 ### Running the Application
 

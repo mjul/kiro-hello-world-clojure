@@ -172,7 +172,7 @@
   
   ;; OAuth callback routes
   (GET "/auth/microsoft/callback" [] (oauth-callback-handler "microsoft"))
-  (GET "/auth/github/callback" [] (oauth-callback-handler "github"))
+  (GET "/auth/callback/github" [] (oauth-callback-handler "github"))
   
   ;; Protected dashboard route
   (GET "/dashboard" [] (middleware/wrap-authentication dashboard-handler))

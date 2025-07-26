@@ -24,7 +24,7 @@
             :token-url "https://github.com/login/oauth/access_token"
             :user-info-url "https://api.github.com/user"
             :scopes "user:email"
-            :redirect-uri (str (env :base-url "http://localhost:3000") "/auth/github/callback")}})
+            :redirect-uri (str (env :base-url "http://localhost:3000") "/auth/callback/github")}})
 
 ;; OAuth2 State Management
 (def ^:private secure-random (SecureRandom.))

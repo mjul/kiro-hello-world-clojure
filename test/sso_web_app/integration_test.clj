@@ -374,7 +374,7 @@
           (is (some? oauth-state))
           
           ;; Step 2: OAuth callback with authorization code
-          (let [callback-request (-> (mock/request :get "/auth/github/callback")
+          (let [callback-request (-> (mock/request :get "/auth/callback/github")
                                     (assoc :params {:code "mock-github-code" :state oauth-state})
                                     (assoc :session (:session oauth-init-response)))
                 callback-response (routes/app callback-request)]
