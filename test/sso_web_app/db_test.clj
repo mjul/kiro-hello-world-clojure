@@ -11,7 +11,7 @@
 
 (defn with-test-db [test-fn]
   "Test fixture that provides an in-memory database."
-  (with-redefs [db/db-config test-db-config]
+  (binding [db/*db-config* test-db-config]
     (test-fn)))
 
 (use-fixtures :each with-test-db)

@@ -81,7 +81,10 @@
           (do
             (errors/log-auth-event :oauth-failure request 
                                   {:provider provider :oauth-error error})
-            (throw (RuntimeException. (str "OAuth provider error: " error))))
+            {:status 401
+             :headers {"Content-Type" "text/html"}
+             :body (templates/error-page "OAuth Authentication Failed" 
+                                       (str "OAuth provider error: " error))})
           
           ;; Handle successful callback
           (and code state)
@@ -108,16 +111,28 @@
               (do
                 (errors/log-auth-event :oauth-failure request 
                                       {:provider provider :error (:error callback-result)})
-                (throw (RuntimeException. (str "OAuth callback failed: " (:error callback-result)))))))
+                {:status 401
+                 :headers {"Content-Type" "text/html"}
+                 :body (templates/error-page "OAuth Authentication Failed" 
+                                           (str "OAuth callback failed: " (:error callback-result)))})))
           
           ;; Missing required parameters
           :else
-          (throw (IllegalArgumentException. "OAuth callback missing required parameters")))
+          (do
+            (errors/log-auth-event :oauth-failure request 
+                                  {:provider provider :error "OAuth callback missing required parameters"})
+            {:status 401
+             :headers {"Content-Type" "text/html"}
+             :body (templates/error-page "OAuth Authentication Failed" 
+                                       "OAuth callback missing required parameters")}))
         
         (catch Exception e
           (errors/log-auth-event :oauth-failure request 
                                 {:provider provider :error (.getMessage e)})
-          (throw e))))))
+          {:status 500
+           :headers {"Content-Type" "text/html"}
+           :body (templates/error-page "OAuth Authentication Error" 
+                                     (str "An error occurred during authentication: " (.getMessage e)))})))))
 
 (defn dashboard-handler
   "Protected dashboard route with user greeting display.

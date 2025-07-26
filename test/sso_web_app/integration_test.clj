@@ -38,7 +38,7 @@
   [test-fn]
   (try
     ;; Override database configuration for testing
-    (with-redefs [db/db-config {:classname "org.sqlite.JDBC"
+    (binding [db/*db-config* {:classname "org.sqlite.JDBC"
                                 :subprotocol "sqlite"
                                 :subname ":memory:"}]
       (db/init-db!)
@@ -444,7 +444,7 @@
         (is (some? validated-user)))
       
       ;; Simulate session expiration by updating database directly
-      (jdbc/execute! db/db-config ["UPDATE sessions SET expires_at = datetime('now', '-1 hour') WHERE session_id = ?" 
+      (jdbc/execute! (db/get-db-config) ["UPDATE sessions SET expires_at = datetime('now', '-1 hour') WHERE session_id = ?" 
                     (:session_id session)])
       
       ;; Test that expired session is no longer valid
@@ -579,7 +579,7 @@
           session2 (create-test-session (:id user2))]
       
       ;; Expire one session manually
-      (jdbc/execute! db/db-config ["UPDATE sessions SET expires_at = datetime('now', '-1 hour') WHERE session_id = ?" 
+      (jdbc/execute! (db/get-db-config) ["UPDATE sessions SET expires_at = datetime('now', '-1 hour') WHERE session_id = ?" 
                     (:session_id session1)])
       
       ;; Run cleanup
