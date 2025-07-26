@@ -1,14 +1,43 @@
+# Leiningen
+target/
+classes/
+checkouts/
 pom.xml
 pom.xml.asc
 *.jar
 *.class
-/lib/
-/classes/
-/target/
-/checkouts/
-.lein-deps-sum
-.lein-repl-history
-.lein-plugins/
-.lein-failures
-.nrepl-port
-.cpcache/
+/.lein-*
+/.nrepl-port
+/.nrepl-history
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Environment and secrets
+profiles.clj
+.env
+.env.local
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*~
+*.swp
+*.swo
+.#*
