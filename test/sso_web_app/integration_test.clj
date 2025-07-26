@@ -36,15 +36,26 @@
 (defn with-test-database
   "Test fixture that sets up and tears down test database."
   [test-fn]
-  (try
-    ;; Override database configuration for testing
-    (binding [db/*db-config* {:classname "org.sqlite.JDBC"
-                                :subprotocol "sqlite"
-                                :subname ":memory:"}]
-      (db/init-db!)
-      (test-fn))
-    (finally
-      nil)))
+  ;; Use a file-based database for tests to avoid SQLite in-memory connection issues
+  (let [test-db-file (str "test-" (System/currentTimeMillis) ".db")
+        test-db-config {:classname "org.sqlite.JDBC"
+                        :subprotocol "sqlite"
+                        :subname test-db-file}]
+    (try
+      ;; Override database configuration for testing
+      (binding [db/*db-config* test-db-config]
+        ;; Ensure database is properly initialized
+        (db/init-db!)
+        ;; Run the test
+        (test-fn))
+      (catch Exception e
+        (println "Test database setup failed:" (.getMessage e))
+        (throw e))
+      (finally
+        ;; Clean up test database file
+        (try
+          (clojure.java.io/delete-file test-db-file true)
+          (catch Exception _))))))
 
 (use-fixtures :each with-test-database)
 

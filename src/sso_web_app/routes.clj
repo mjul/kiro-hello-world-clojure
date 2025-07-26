@@ -193,17 +193,21 @@
   (-> app-routes
       ;; Global error handling middleware (must be first to catch all errors)
       errors/wrap-error-handling
-      ;; Security middleware (CSRF, headers, input validation)
-      middleware/wrap-security
       ;; Session cleanup middleware
       middleware/wrap-session-cleanup
       ;; Session and cookie handling
       wrap-session
       wrap-cookies
-      ;; Default Ring middleware (without anti-forgery since we handle it ourselves)
+      ;; Default Ring middleware (without anti-forgery and security headers since we handle them ourselves)
       (wrap-defaults (-> site-defaults
                         ;; Disable built-in anti-forgery since we have custom CSRF protection
-                        (assoc-in [:security :anti-forgery] false)))))
+                        (assoc-in [:security :anti-forgery] false)
+                        ;; Disable built-in security headers since we have custom ones
+                        (assoc-in [:security :frame-options] false)
+                        (assoc-in [:security :content-type-options] false)
+                        (assoc-in [:security :xss-protection] false)))
+      ;; Security middleware (CSRF, headers, input validation) - applied last to override defaults
+      middleware/wrap-security))
 
 ;; Utility functions for route testing and development
 

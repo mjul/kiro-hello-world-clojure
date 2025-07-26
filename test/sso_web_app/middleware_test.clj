@@ -201,7 +201,9 @@
   (testing "Logout with valid session"
     (with-redefs [middleware/get-session-id-from-request (fn [req] test-session-id)
                   middleware/invalidate-session (fn [session-id] true)]
-      (let [request {:cookies {"session-id" {:value test-session-id}}}
+      (let [request {:cookies {"session-id" {:value test-session-id}}
+                     :request-method :post
+                     :uri "/logout"}
             response (middleware/logout-user request)]
         (is (= 302 (:status response)))
         (is (= "/login" (get-in response [:headers "Location"])))
@@ -209,7 +211,8 @@
   
   (testing "Logout without session"
     (with-redefs [middleware/get-session-id-from-request (fn [req] nil)]
-      (let [request {}
+      (let [request {:request-method :post
+                     :uri "/logout"}
             response (middleware/logout-user request)]
         (is (= 302 (:status response)))
         (is (= "/login" (get-in response [:headers "Location"])))))))
