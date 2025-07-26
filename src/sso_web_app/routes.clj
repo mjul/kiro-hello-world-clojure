@@ -104,10 +104,11 @@
                                         {:user-id (:id user) :session-id (:session_id session)})
                   
                   ;; Redirect to dashboard with session cookie
-                  (-> (response/redirect "/dashboard")
-                      (middleware/add-session-cookie (:session_id session))
-                      ;; Clear OAuth state from session
-                      (assoc :session {}))))
+                  (let [preserved-session (dissoc (:session request) :oauth-state)]
+                    (-> (response/redirect "/dashboard")
+                        (middleware/add-session-cookie (:session_id session))
+                        ;; Clear OAuth state from session while preserving other session data
+                        (assoc :session preserved-session)))))
               (do
                 (errors/log-auth-event :oauth-failure request 
                                       {:provider provider :error (:error callback-result)})

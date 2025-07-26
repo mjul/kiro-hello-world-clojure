@@ -269,6 +269,218 @@
       (is (number? (:status response)))
       (is (map? (:headers response))))))
 
+;; Session state management unit tests
+
+(deftest test-oauth-callback-preserves-non-oauth-session-data
+  (testing "OAuth callback handlers preserve non-OAuth session data"
+    (with-redefs [auth/handle-github-callback (fn [code state session-state]
+                                                {:success true
+                                                 :user {:provider "github"
+                                                       :provider-id "12345"
+                                                       :username "testuser"
+                                                       :email "test@example.com"}})
+                  db/create-or-update-user! (fn [user-profile]
+                                              {:id "user-123"
+                                               :provider (:provider user-profile)
+                                               :provider_id (:provider-id user-profile)
+                                               :username (:username user-profile)
+                                               :email (:email user-profile)})
+                  middleware/create-user-session (fn [user-id]
+                                                   {:session_id "session-456"
+                                                    :user_id user-id
+                                                    :expires_at "2025-07-27T00:00:00Z"})
+                  middleware/add-session-cookie (fn [response session-id]
+                                                  (assoc-in response [:cookies "session-id"] 
+                                                           {:value session-id}))]
+      ;; Test GitHub OAuth callback with existing session data
+      (let [request {:request-method :get
+                     :uri "/auth/callback/github"
+                     :params {:code "test-code" :state "test-state"}
+                     :session {:oauth-state "test-state"
+                              :csrf-token "csrf-123"
+                              :other-data "should-be-preserved"}}
+            response ((routes/oauth-callback-handler "github") request)]
+        
+        ;; Verify successful redirect
+        (is (= 302 (:status response)))
+        (is (= "/dashboard" (get-in response [:headers "Location"])))
+        
+        ;; Verify session cookie is set
+        (is (= "session-456" (get-in response [:cookies "session-id" :value])))
+        
+        ;; Verify OAuth state is removed but other session data is preserved
+        (is (nil? (get-in response [:session :oauth-state])))
+        (is (= "csrf-123" (get-in response [:session :csrf-token])))
+        (is (= "should-be-preserved" (get-in response [:session :other-data])))))
+    
+    ;; Test Microsoft OAuth callback with existing session data
+    (with-redefs [auth/handle-oauth-callback (fn [provider code state session-state]
+                                               {:success true
+                                                :user {:provider "microsoft"
+                                                      :provider-id "67890"
+                                                      :username "msuser"
+                                                      :email "msuser@example.com"}})
+                  db/create-or-update-user! (fn [user-profile]
+                                              {:id "user-789"
+                                               :provider (:provider user-profile)
+                                               :provider_id (:provider-id user-profile)
+                                               :username (:username user-profile)
+                                               :email (:email user-profile)})
+                  middleware/create-user-session (fn [user-id]
+                                                   {:session_id "session-789"
+                                                    :user_id user-id
+                                                    :expires_at "2025-07-27T00:00:00Z"})
+                  middleware/add-session-cookie (fn [response session-id]
+                                                  (assoc-in response [:cookies "session-id"] 
+                                                           {:value session-id}))]
+      (let [request {:request-method :get
+                     :uri "/auth/microsoft/callback"
+                     :params {:code "ms-code" :state "ms-state"}
+                     :session {:oauth-state "ms-state"
+                              :user-preference "dark-mode"
+                              :language "en"}}
+            response ((routes/oauth-callback-handler "microsoft") request)]
+        
+        ;; Verify successful redirect
+        (is (= 302 (:status response)))
+        (is (= "/dashboard" (get-in response [:headers "Location"])))
+        
+        ;; Verify session cookie is set
+        (is (= "session-789" (get-in response [:cookies "session-id" :value])))
+        
+        ;; Verify OAuth state is removed but other session data is preserved
+        (is (nil? (get-in response [:session :oauth-state])))
+        (is (= "dark-mode" (get-in response [:session :user-preference])))
+        (is (= "en" (get-in response [:session :language])))))))
+
+(deftest test-oauth-state-removal-from-session
+  (testing "OAuth state is properly removed from session after callback"
+    (with-redefs [auth/handle-github-callback (fn [code state session-state]
+                                                {:success true
+                                                 :user {:provider "github"
+                                                       :provider-id "12345"
+                                                       :username "testuser"
+                                                       :email "test@example.com"}})
+                  db/create-or-update-user! (fn [user-profile]
+                                              {:id "user-123"
+                                               :provider (:provider user-profile)
+                                               :provider_id (:provider-id user-profile)
+                                               :username (:username user-profile)
+                                               :email (:email user-profile)})
+                  middleware/create-user-session (fn [user-id]
+                                                   {:session_id "session-456"
+                                                    :user_id user-id
+                                                    :expires_at "2025-07-27T00:00:00Z"})
+                  middleware/add-session-cookie (fn [response session-id]
+                                                  (assoc-in response [:cookies "session-id"] 
+                                                           {:value session-id}))]
+      ;; Test that OAuth state is present before callback
+      (let [initial-session {:oauth-state "test-state-123"
+                            :csrf-token "csrf-456"}
+            request {:request-method :get
+                     :uri "/auth/callback/github"
+                     :params {:code "test-code" :state "test-state-123"}
+                     :session initial-session}
+            response ((routes/oauth-callback-handler "github") request)]
+        
+        ;; Verify OAuth state is removed from session
+        (is (nil? (get-in response [:session :oauth-state])))
+        
+        ;; Verify other session data remains
+        (is (= "csrf-456" (get-in response [:session :csrf-token])))
+        
+        ;; Verify response is successful
+        (is (= 302 (:status response)))))))
+
+(deftest test-oauth-callback-session-cookie-persistence
+  (testing "Session cookies are correctly set and maintained across requests"
+    (let [test-session-id "persistent-session-123"]
+      (with-redefs [auth/handle-github-callback (fn [code state session-state]
+                                                  {:success true
+                                                   :user {:provider "github"
+                                                         :provider-id "12345"
+                                                         :username "testuser"
+                                                         :email "test@example.com"}})
+                    db/create-or-update-user! (fn [user-profile]
+                                                {:id "user-123"
+                                                 :provider (:provider user-profile)
+                                                 :provider_id (:provider-id user-profile)
+                                                 :username (:username user-profile)
+                                                 :email (:email user-profile)})
+                    middleware/create-user-session (fn [user-id]
+                                                     {:session_id test-session-id
+                                                      :user_id user-id
+                                                      :expires_at "2025-07-27T00:00:00Z"})
+                    middleware/add-session-cookie (fn [response session-id]
+                                                    (assoc-in response [:cookies "session-id"] 
+                                                             {:value session-id
+                                                              :http-only true
+                                                              :secure false
+                                                              :same-site :strict
+                                                              :max-age 86400}))]
+        
+        ;; Test OAuth callback sets session cookie correctly
+        (let [callback-request {:request-method :get
+                               :uri "/auth/callback/github"
+                               :params {:code "test-code" :state "test-state"}
+                               :session {:oauth-state "test-state"}}
+              callback-response ((routes/oauth-callback-handler "github") callback-request)]
+          
+          ;; Verify session cookie is set with correct attributes
+          (is (= test-session-id (get-in callback-response [:cookies "session-id" :value])))
+          (is (= true (get-in callback-response [:cookies "session-id" :http-only])))
+          (is (= false (get-in callback-response [:cookies "session-id" :secure])))
+          (is (= :strict (get-in callback-response [:cookies "session-id" :same-site])))
+          (is (= 86400 (get-in callback-response [:cookies "session-id" :max-age])))
+          
+          ;; Verify redirect to dashboard
+          (is (= 302 (:status callback-response)))
+          (is (= "/dashboard" (get-in callback-response [:headers "Location"]))))))))
+
+(deftest test-oauth-callback-session-state-edge-cases
+  (testing "OAuth callback handles session state edge cases correctly"
+    ;; Test with empty session
+    (with-redefs [auth/handle-github-callback (fn [code state session-state]
+                                                {:success true
+                                                 :user {:provider "github"
+                                                       :provider-id "12345"
+                                                       :username "testuser"
+                                                       :email "test@example.com"}})
+                  db/create-or-update-user! (fn [user-profile]
+                                              {:id "user-123"
+                                               :provider (:provider user-profile)
+                                               :provider_id (:provider-id user-profile)
+                                               :username (:username user-profile)
+                                               :email (:email user-profile)})
+                  middleware/create-user-session (fn [user-id]
+                                                   {:session_id "session-456"
+                                                    :user_id user-id
+                                                    :expires_at "2025-07-27T00:00:00Z"})
+                  middleware/add-session-cookie (fn [response session-id]
+                                                  (assoc-in response [:cookies "session-id"] 
+                                                           {:value session-id}))]
+      ;; Test with empty session
+      (let [request {:request-method :get
+                     :uri "/auth/callback/github"
+                     :params {:code "test-code" :state "test-state"}
+                     :session {}}
+            response ((routes/oauth-callback-handler "github") request)]
+        
+        ;; Should still work and not have oauth-state in response session
+        (is (= 302 (:status response)))
+        (is (nil? (get-in response [:session :oauth-state]))))
+      
+      ;; Test with nil session
+      (let [request {:request-method :get
+                     :uri "/auth/callback/github"
+                     :params {:code "test-code" :state "test-state"}
+                     :session nil}
+            response ((routes/oauth-callback-handler "github") request)]
+        
+        ;; Should still work
+        (is (= 302 (:status response)))
+        (is (nil? (get-in response [:session :oauth-state])))))))
+
 ;; Route utility function tests
 
 (deftest test-get-routes-function

@@ -88,6 +88,7 @@
              :http-only true
              :secure false ; Set to true in production with HTTPS
              :same-site :strict
+             :path "/"
              :max-age (* session-duration-hours 3600)}))
 
 (defn remove-session-cookie
@@ -95,6 +96,7 @@
   [response]
   (assoc-in response [:cookies "session-id"] 
             {:value ""
+             :path "/"
              :expires "Thu, 01 Jan 1970 00:00:00 GMT"
              :max-age 0}))
 
