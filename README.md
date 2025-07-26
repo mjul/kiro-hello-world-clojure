@@ -2,6 +2,20 @@
 
 A Clojure web application that provides Single Sign-On authentication with Microsoft 365 and GitHub.
 
+## Kiro Review
+This was generated with AWS Kiro. Code gen initially looks fairly fast, but with lots of trial and error. It emits a lot of syntax errors (e.g. it frequently does not know the comment syntax, so edits break the code). It tries to run a REPL, but does not interact with it: it just hangs. Fixing compile errors consume a lot of retries, perhaps due to the terse error messages from the Clojure compiler (`EOF while reading, start at line 367` does not offer too much help). Eventually it ran out of quota, pausing the work until the next day. 
+
+Then, the next day I asked it to complete the tasks. Which it did through more trial and error. Except it finished with the test suite all red. So I asked it to fix that. Again. And Again. And again. Then it ran out of quota again, pausing the work until the next day. 
+
+Clojure is useless as a target language. The other target languages in this series work much better.
+
+This is part of an experiment with multiple version generated from the same specification:
+ - [Rust version](https://github.com/mjul/kiro-hello-world-rust) 
+ - [Go version](https://github.com/mjul/kiro-hello-world-go)
+ - [TypeScript version](https://github.com/mjul/kiro-hello-world-typescript) 
+ - [Clojure version](https://github.com/mjul/kiro-hello-world-clojure) 
+
+
 ## Features
 
 - OAuth2 authentication with Microsoft 365 and GitHub
